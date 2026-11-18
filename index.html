@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlyerCart — All Local Weekly Grocery Flyers in One Cart</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .flyer-badge { font-variant-numeric: tabular-nums; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased">
+
+  <!-- Top Navigation -->
+  <header class="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+          F
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight tracking-tight text-slate-900">FlyerCart</h1>
+          <p class="text-xs text-slate-500">5 Weekly Circulars • ZIP 93720</p>
+        </div>
+      </div>
+
+      <!-- Unified Search -->
+      <div class="flex-1 max-w-md">
+        <div class="relative">
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Search across all 5 flyers (e.g., ribeye, eggs, berries)..."
+            class="w-full pl-9 pr-4 py-2 text-sm bg-slate-100 border border-transparent focus:border-emerald-500 focus:bg-white rounded-xl outline-none transition"
+          />
+          <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- Cart Trigger (Mobile & Desktop) -->
+      <button
+        onclick="toggleCartDrawer()"
+        class="relative inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-medium transition shadow-sm"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+        <span>Basket</span>
+        <span id="cartCountBadge" class="flyer-badge bg-emerald-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+      </button>
+    </div>
+
+    <!-- Store Filter Tabs -->
+    <div class="bg-slate-50/90 border-t border-slate-200/80">
+      <div id="storeTabs" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- Left Column: Flyer Deals Feed -->
+    <section class="lg:col-span-8 space-y-5">
+      <!-- Category Pills & Sort -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div id="categoryPills" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <!-- Populated by JS -->
+        </div>
+
+        <select id="sortSelect" class="text-xs font-medium bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-slate-700 outline-none focus:border-emerald-500">
+          <option value="savings">Sort: Biggest % Savings</option>
+          <option value="price_asc">Sort: Lowest Price</option>
+          <option value="store">Sort: Group by Store</option>
+        </select>
+      </div>
+
+      <!-- Active Ad Cycle Banner -->
+      <div class="bg-emerald-900 text-white rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+        <div>
+          <span class="inline-block text-[11px] uppercase tracking-wider font-semibold bg-emerald-700/80 text-emerald-100 px-2 py-0.5 rounded-md mb-1">
+            Weekly Ad Cycle Active
+          </span>
+          <h2 class="text-base font-semibold">5 Local Circulars Merged &amp; Deduplicated</h2>
+          <p class="text-xs text-emerald-200">Tap any flyer item to add it to your basket, then send your list to delivery in one click.</p>
+        </div>
+        <div class="text-right shrink-0">
+          <div id="visibleDealsCount" class="text-2xl font-bold flyer-badge">20</div>
+          <div class="text-[11px] text-emerald-200">Weekly Specials</div>
+        </div>
+      </div>
+
+      <!-- Deals Grid -->
+      <div id="dealsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <!-- Right Column: Persistent Multi-Store Basket & Delivery Handoff -->
+    <aside id="desktopCartPanel" class="lg:col-span-4">
+      <div class="sticky top-32 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col max-h-[calc(100vh-9rem)]">
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white">
+          <div>
+            <h3 class="font-semibold text-sm">Unified Flyer Basket</h3>
+            <p class="text-[11px] text-slate-400">Grouped automatically by store</p>
+          </div>
+          <button onclick="clearCart()" class="text-xs text-slate-300 hover:text-white underline">Clear</button>
+        </div>
+
+        <!-- Cart Items Grouped by Store -->
+        <div id="cartItemsContainer" class="p-4 overflow-y-auto flex-1 space-y-4">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Savings & Checkout Handoff Footer -->
+        <div class="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
+          <div class="space-y-1 text-xs">
+            <div class="flex justify-between text-slate-500">
+              <span>Regular Shelf Price</span>
+              <span id="regularTotal" class="line-through flyer-badge">$0.00</span>
+            </div>
+            <div class="flex justify-between text-emerald-600 font-semibold">
+              <span>Circular Flyer Savings</span>
+              <span id="savingsTotal" class="flyer-badge">-$0.00</span>
+            </div>
+            <div class="flex justify-between text-base font-bold text-slate-900 pt-1 border-t border-slate-200">
+              <span>Estimated Flyer Total</span>
+              <span id="saleTotal" class="flyer-badge">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Delivery Provider Selector -->
+          <div>
+            <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
+              Send Basket To Delivery Service
+            </label>
+            <div class="grid grid-cols-3 gap-1.5" id="providerButtons">
+              <button type="button" data-provider="Instacart" onclick="selectProvider('Instacart')" class="provider-btn active py-2 px-2 rounded-lg border text-xs font-semibold transition text-center bg-emerald-50 border-emerald-600 text-emerald-800">
+                Instacart
+              </button>
+              <button type="button" data-provider="DoorDash" onclick="selectProvider('DoorDash')" class="provider-btn py-2 px-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold transition text-center hover:bg-slate-50">
+                DoorDash
+              </button>
+              <button type="button" data-provider="Curbside" onclick="selectProvider('Curbside')" class="provider-btn py-2 px-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold transition text-center hover:bg-slate-50">
+                Store Pickup
+              </button>
+            </div>
+          </div>
+
+          <button
+            id="dispatchBtn"
+            onclick="openDeliveryModal()"
+            disabled
+            class="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold text-sm transition shadow-sm flex items-center justify-center gap-2"
+          >
+            <span>Send to Instacart</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Delivery Handoff Confirmation Modal -->
+  <div id="deliveryModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden border border-slate-200">
+      <div class="p-5 bg-emerald-600 text-white flex items-center justify-between">
+        <div>
+          <h3 id="modalTitle" class="font-bold text-lg">Ready for Instacart Handoff</h3>
+          <p class="text-xs text-emerald-100">Deep-link payload &amp; multi-store fulfillment manifest generated</p>
+        </div>
+        <button onclick="closeDeliveryModal()" class="text-white/80 hover:text-white text-xl font-bold">&times;</button>
+      </div>
+      <div id="modalBody" class="p-5 space-y-4 max-h-[70vh] overflow-y-auto text-sm">
+        <!-- Populated dynamically -->
+      </div>
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
+        <button onclick="closeDeliveryModal()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-100">
+          Back to Flyers
+        </button>
+        <button onclick="simulateLaunch()" class="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800">
+          Launch Checkout Session
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 5 Local Grocery Circulars Dataset
+    const STORES = [
+      { id: "all", name: "All 5 Flyers", color: "bg-slate-900 text-white" },
+      { id: "savemart", name: "Save Mart", badgeColor: "bg-red-100 text-red-800 border-red-200", ends: "Tue" },
+      { id: "vons", name: "Vons", badgeColor: "bg-rose-100 text-rose-800 border-rose-200", ends: "Tue" },
+      { id: "smartfinal", name: "Smart & Final", badgeColor: "bg-amber-100 text-amber-800 border-amber-200", ends: "Tue" },
+      { id: "walmart", name: "Walmart", badgeColor: "bg-blue-100 text-blue-800 border-blue-200", ends: "Sun" },
+      { id: "foodmaxx", name: "FoodMaxx", badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200", ends: "Tue" }
+    ];
+
+    const DEALS = [
+      { id: 1, storeId: "savemart", name: "USDA Choice Ribeye Steak", unit: "per lb • Value Pack", category: "Meat & Seafood", salePrice: 7.99, regPrice: 14.99, tag: "Front Page Deal", emoji: "🥩" },
+      { id: 2, storeId: "savemart", name: "Fresh California Strawberries", unit: "16 oz clamshell", category: "Produce", salePrice: 1.99, regPrice: 3.99, tag: "50% Off", emoji: "🍓" },
+      { id: 3, storeId: "savemart", name: "Foster Farms Chicken Breasts", unit: "per lb • Boneless Skinless", category: "Meat & Seafood", salePrice: 2.49, regPrice: 4.79, tag: "Weekly Special", emoji: "🍗" },
+      { id: 4, storeId: "savemart", name: "Tillamook Chunk Cheese", unit: "8 oz • Assorted", category: "Dairy & Eggs", salePrice: 2.99, regPrice: 4.99, tag: "Digital Coupon", emoji: "🧀" },
+
+      { id: 5, storeId: "vons", name: "Lucerne Large Grade AA Eggs", unit: "18 ct carton", category: "Dairy & Eggs", salePrice: 3.49, regPrice: 5.99, tag: "Vons for U", emoji: "🥚" },
+      { id: 6, storeId: "vons", name: "Honeycrisp Apples", unit: "per lb • Washington Grown", category: "Produce", salePrice: 1.49, regPrice: 2.99, tag: "50% Off", emoji: "🍎" },
+      { id: 7, storeId: "vons", name: "Wild-Caught Atlantic Salmon", unit: "per lb • Fresh Fillets", category: "Meat & Seafood", salePrice: 8.99, regPrice: 13.99, tag: "Weekend Sale", emoji: "🐟" },
+      { id: 8, storeId: "vons", name: "Starbucks Ground Coffee", unit: "12 oz bag", category: "Pantry", salePrice: 6.99, regPrice: 10.49, tag: "Buy 2 Save $2", emoji: "☕" },
+
+      { id: 9, storeId: "smartfinal", name: "Hass Avocados (Bulk Bag)", unit: "5 ct bag", category: "Produce", salePrice: 3.99, regPrice: 6.49, tag: "Club Size Deal", emoji: "🥑" },
+      { id: 10, storeId: "smartfinal", name: "First Street Olive Oil", unit: "50.7 oz bottle", category: "Pantry", salePrice: 11.99, regPrice: 16.99, tag: "Bulk Value", emoji: "🫒" },
+      { id: 11, storeId: "smartfinal", name: "Coca-Cola / Sprite 24-Pack", unit: "24 x 12 oz cans", category: "Beverages", salePrice: 10.99, regPrice: 15.49, tag: "Limit 2", emoji: "🥤" },
+      { id: 12, storeId: "smartfinal", name: "Whole Boneless Pork Loin", unit: "per lb", category: "Meat & Seafood", salePrice: 1.99, regPrice: 3.49, tag: "Butcher Special", emoji: "🥓" },
+
+      { id: 13, storeId: "walmart", name: "Great Value Whole Milk", unit: "1 Gallon", category: "Dairy & Eggs", salePrice: 2.78, regPrice: 3.64, tag: "Rollback", emoji: "🥛" },
+      { id: 14, storeId: "walmart", name: "Bananas", unit: "per lb", category: "Produce", salePrice: 0.54, regPrice: 0.72, tag: "Everyday Low", emoji: "🍌" },
+      { id: 15, storeId: "walmart", name: "Tide Liquid Laundry Detergent", unit: "84 fl oz", category: "Household", salePrice: 11.97, regPrice: 15.97, tag: "Rollback", emoji: "🧺" },
+      { id: 16, storeId: "walmart", name: "Barilla Pasta Varieties", unit: "16 oz box", category: "Pantry", salePrice: 1.38, regPrice: 2.12, tag: "Rollback", emoji: "🍝" },
+
+      { id: 17, storeId: "foodmaxx", name: "Roma Tomatoes", unit: "per lb", category: "Produce", salePrice: 0.79, regPrice: 1.69, tag: "Maxx Deal", emoji: "🍅" },
+      { id: 18, storeId: "foodmaxx", name: "Cilantro & Green Onions", unit: "3 bunches for $1", category: "Produce", salePrice: 1.00, regPrice: 2.37, tag: "3 for $1", emoji: "🌿" },
+      { id: 19, storeId: "foodmaxx", name: "Jasmine Long Grain Rice", unit: "20 lb bag", category: "Pantry", salePrice: 14.99, regPrice: 21.99, tag: "Family Pack", emoji: "🍚" },
+      { id: 20, storeId: "foodmaxx", name: "Beef Chuck Roast", unit: "per lb • Boneless", category: "Meat & Seafood", salePrice: 4.99, regPrice: 8.49, tag: "Front Page", emoji: "🥩" }
+    ];
+
+    let activeStore = "all";
+    let activeCategory = "All";
+    let searchQuery = "";
+    let sortBy = "savings";
+    let selectedProvider = "Instacart";
+    let cart = {}; // { dealId: qty }
+
+    function getStore(id) {
+      return STORES.find(s => s.id === id);
+    }
+
+    function renderStoreTabs() {
+      const container = document.getElementById("storeTabs");
+      container.innerHTML = STORES.map(s => {
+        const isSelected = activeStore === s.id;
+        const count = s.id === "all" ? DEALS.length : DEALS.filter(d => d.storeId === s.id).length;
+        return `
+          <button
+            onclick="setStore('${s.id}')"
+            class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1.5 border ${
+              isSelected
+                ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
+            }"
+          >
+            <span>${s.name}</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? "bg-slate-700 text-slate-200" : "bg-slate-100 text-slate-500"}">${count}</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderCategoryPills() {
+      const categories = ["All", ...new Set(DEALS.map(d => d.category))];
+      const container = document.getElementById("categoryPills");
+      container.innerHTML = categories.map(cat => {
+        const isSelected = activeCategory === cat;
+        return `
+          <button
+            onclick="setCategory('${cat}')"
+            class="shrink-0 px-3 py-1 rounded-lg text-xs font-medium transition ${
+              isSelected
+                ? "bg-emerald-600 text-white"
+                : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-100"
+            }"
+          >
+            ${cat}
+          </button>
+        `;
+      }).join("");
+    }
+
+    function renderDeals() {
+      let filtered = DEALS.filter(d => {
+        const matchesStore = activeStore === "all" || d.storeId === activeStore;
+        const matchesCat = activeCategory === "All" || d.category === activeCategory;
+        const q = searchQuery.trim().toLowerCase();
+        const matchesSearch = !q || d.name.toLowerCase().includes(q) || d.category.toLowerCase().includes(q) || getStore(d.storeId).name.toLowerCase().includes(q);
+        return matchesStore && matchesCat && matchesSearch;
+      });
+
+      if (sortBy === "savings") {
+        filtered.sort((a, b) => ((b.regPrice - b.salePrice) / b.regPrice) - ((a.regPrice - a.salePrice) / a.regPrice));
+      } else if (sortBy === "price_asc") {
+        filtered.sort((a, b) => a.salePrice - b.salePrice);
+      } else if (sortBy === "store") {
+        filtered.sort((a, b) => a.storeId.localeCompare(b.storeId));
+      }
+
+      document.getElementById("visibleDealsCount").textContent = filtered.length;
+      const grid = document.getElementById("dealsGrid");
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full bg-white rounded-2xl border border-slate-200 p-10 text-center">
+            <p class="text-sm font-semibold text-slate-700">No flyer specials match your filter.</p>
+            <p class="text-xs text-slate-500 mt-1">Try switching back to "All 5 Flyers" or clearing your search.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(deal => {
+        const store = getStore(deal.storeId);
+        const pctOff = Math.round(((deal.regPrice - deal.salePrice) / deal.regPrice) * 100);
+        const qty = cart[deal.id] || 0;
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200/90 p-4 flex flex-col justify-between hover:shadow-md transition relative">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-3">
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded-md border ${store.badgeColor}">
+                  ${store.name}
+                </span>
+                <span class="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                  Save ${pctOff}%
+                </span>
+              </div>
+
+              <div class="flex items-start gap-3 mb-3">
+                <div class="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-2xl shrink-0">
+                  ${deal.emoji}
+                </div>
+                <div>
+                  <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">${deal.tag}</span>
+                  <h3 class="font-semibold text-sm text-slate-900 leading-snug">${deal.name}</h3>
+                  <p class="text-xs text-slate-500">${deal.unit}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+              <div>
+                <div class="flex items-baseline gap-1.5">
+                  <span class="text-lg font-extrabold text-slate-900 flyer-badge">$${deal.salePrice.toFixed(2)}</span>
+                  <span class="text-xs text-slate-400 line-through flyer-badge">$${deal.regPrice.toFixed(2)}</span>
+                </div>
+                <span class="text-[10px] text-slate-400">Ends ${store.ends}</span>
+              </div>
+
+              ${
+                qty === 0
+                  ? `<button onclick="updateQty(${deal.id}, 1)" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition shadow-xs">
+                      + Add
+                    </button>`
+                  : `<div class="inline-flex items-center bg-slate-900 text-white rounded-xl overflow-hidden">
+                      <button onclick="updateQty(${deal.id}, -1)" class="px-2.5 py-1 text-xs font-bold hover:bg-slate-700">-</button>
+                      <span class="px-2 text-xs font-bold flyer-badge">${qty}</span>
+                      <button onclick="updateQty(${deal.id}, 1)" class="px-2.5 py-1 text-xs font-bold hover:bg-slate-700">+</button>
+                    </div>`
+              }
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderCart() {
+      const entries = Object.entries(cart).filter(([_, qty]) => qty > 0);
+      const totalItems = entries.reduce((sum, [_, qty]) => sum + qty, 0);
+      document.getElementById("cartCountBadge").textContent = totalItems;
+
+      const container = document.getElementById("cartItemsContainer");
+      const dispatchBtn = document.getElementById("dispatchBtn");
+
+      if (entries.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-10 px-4">
+            <div class="text-3xl mb-2">🛒</div>
+            <p class="text-sm font-semibold text-slate-700">Your flyer basket is empty</p>
+            <p class="text-xs text-slate-500 mt-1">Click "+ Add" on any weekly special across Save Mart, Vons, Smart &amp; Final, Walmart, or FoodMaxx.</p>
+          </div>
+        `;
+        document.getElementById("regularTotal").textContent = "$0.00";
+        document.getElementById("savingsTotal").textContent = "-$0.00";
+        document.getElementById("saleTotal").textContent = "$0.00";
+        dispatchBtn.disabled = true;
+        return;
+      }
+
+      dispatchBtn.disabled = false;
+
+      // Group items by store
+      const grouped = {};
+      let regSum = 0;
+      let saleSum = 0;
+
+      entries.forEach(([idStr, qty]) => {
+        const deal = DEALS.find(d => d.id === Number(idStr));
+        if (!deal) return;
+        if (!grouped[deal.storeId]) grouped[deal.storeId] = [];
+        grouped[deal.storeId].push({ deal, qty });
+        regSum += deal.regPrice * qty;
+        saleSum += deal.salePrice * qty;
+      });
+
+      document.getElementById("regularTotal").textContent = `$${regSum.toFixed(2)}`;
+      document.getElementById("savingsTotal").textContent = `-$${(regSum - saleSum).toFixed(2)}`;
+      document.getElementById("saleTotal").textContent = `$${saleSum.toFixed(2)}`;
+
+      container.innerHTML = Object.entries(grouped).map(([storeId, items]) => {
+        const store = getStore(storeId);
+        const storeSubtotal = items.reduce((s, x) => s + x.deal.salePrice * x.qty, 0);
+        return `
+          <div class="border border-slate-200 rounded-xl overflow-hidden">
+            <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-800">${store.name}</span>
+              <span class="text-xs font-semibold text-slate-600 flyer-badge">$${storeSubtotal.toFixed(2)}</span>
+            </div>
+            <div class="divide-y divide-slate-100">
+              ${items.map(({ deal, qty }) => `
+                <div class="p-2.5 flex items-center justify-between gap-2 text-xs">
+                  <div class="min-w-0 flex-1">
+                    <p class="font-medium text-slate-800 truncate">${deal.emoji} ${deal.name}</p>
+                    <p class="text-[11px] text-slate-400">$${deal.salePrice.toFixed(2)} ea</p>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    <button onclick="updateQty(${deal.id}, -1)" class="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 font-bold text-slate-700">-</button>
+                    <span class="w-4 text-center font-semibold flyer-badge">${qty}</span>
+                    <button onclick="updateQty(${deal.id}, 1)" class="w-6 h-6 rounded-md bg-slate-100 hover:bg-slate-200 font-bold text-slate-700">+</button>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function setStore(id) {
+      activeStore = id;
+      renderStoreTabs();
+      renderDeals();
+    }
+
+    function setCategory(cat) {
+      activeCategory = cat;
+      renderCategoryPills();
+      renderDeals();
+    }
+
+    function updateQty(id, delta) {
+      const next = (cart[id] || 0) + delta;
+      if (next <= 0) delete cart[id];
+      else cart[id] = next;
+      renderDeals();
+      renderCart();
+    }
+
+    function clearCart() {
+      cart = {};
+      renderDeals();
+      renderCart();
+    }
+
+    function selectProvider(provider) {
+      selectedProvider = provider;
+      document.querySelectorAll(".provider-btn").forEach(btn => {
+        const isMatch = btn.dataset.provider === provider;
+        btn.className = isMatch
+          ? "provider-btn active py-2 px-2 rounded-lg border text-xs font-semibold transition text-center bg-emerald-50 border-emerald-600 text-emerald-800"
+          : "provider-btn py-2 px-2 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold transition text-center hover:bg-slate-50";
+      });
+      document.querySelector("#dispatchBtn span").textContent = `Send to ${provider}`;
+    }
+
+    function openDeliveryModal() {
+      const entries = Object.entries(cart).filter(([_, qty]) => qty > 0);
+      const grouped = {};
+      entries.forEach(([idStr, qty]) => {
+        const deal = DEALS.find(d => d.id === Number(idStr));
+        if (!grouped[deal.storeId]) grouped[deal.storeId] = [];
+        grouped[deal.storeId].push({ deal, qty });
+      });
+
+      document.getElementById("modalTitle").textContent = `Dispatching to ${selectedProvider}`;
+      const storeCount = Object.keys(grouped).length;
+
+      document.getElementById("modalBody").innerHTML = `
+        <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+          <strong>Multi-Store Routing:</strong> Your basket spans <strong>${storeCount} store${storeCount > 1 ? "s" : ""}</strong>. ${selectedProvider} will create ${storeCount} separate store cart${storeCount > 1 ? "s" : ""} with pre-matched flyer items.
+        </div>
+        <div class="space-y-3">
+          ${Object.entries(grouped).map(([storeId, items]) => {
+            const store = getStore(storeId);
+            const itemLines = items.map(i => `• ${i.qty}x ${i.deal.name} ($${i.deal.salePrice.toFixed(2)})`).join("<br/>");
+            return `
+              <div class="border border-slate-200 rounded-xl p-3">
+                <div class="flex items-center justify-between mb-1.5">
+                  <span class="font-bold text-slate-900">${store.name}</span>
+                  <span class="text-[11px] font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-600">API Payload Ready</span>
+                </div>
+                <div class="text-xs text-slate-600 leading-relaxed">${itemLines}</div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+
+      document.getElementById("deliveryModal").classList.remove("hidden");
+    }
+
+    function closeDeliveryModal() {
+      document.getElementById("deliveryModal").classList.add("hidden");
+    }
+
+    function simulateLaunch() {
+      closeDeliveryModal();
+      alert(`Basket handed off to ${selectedProvider}! In production, this redirects via the Instacart Developer Platform / DoorDash Drive API with pre-populated line items.`);
+    }
+
+    function toggleCartDrawer() {
+      document.getElementById("desktopCartPanel").scrollIntoView({ behavior: "smooth" });
+    }
+
+    document.getElementById("searchInput").addEventListener("input", e => {
+      searchQuery = e.target.value;
+      renderDeals();
+    });
+
+    document.getElementById("sortSelect").addEventListener("change", e => {
+      sortBy = e.target.value;
+      renderDeals();
+    });
+
+    // Initial render
+    renderStoreTabs();
+    renderCategoryPills();
+    renderDeals();
+    renderCart();
+  </script>
+</body>
+</html>
